@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Introducing Frontend Slides</title>
+
+<!-- Fonts: Barlow (all content) + IBM Plex Mono (metadata chrome only) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;700;900&family=IBM+Plex+Mono:wght@500&display=swap">
+
+<style>
+/* ===========================================
+   THEME TOKENS
+   Studio design system — binary palette, no third color.
+   Change these to restyle the entire deck.
+   =========================================== */
+:root {
+    /* Colors — near-black field / acid-yellow type, or the inverse */
+    --c-bg:            #1C1C1C;
+    --c-bg-alt:        #242422;
+    --c-bg-light:      #F5D200;
+    --c-fg:            #F5D200;   /* type on dark */
+    --c-fg-light:      #1C1C1C;   /* type on yellow */
+    --c-fg-2:          rgba(245,210,0,0.58);
+    --c-fg-3:          rgba(245,210,0,0.32);
+    --c-fg-light-2:    rgba(28,28,28,0.62);
+    --c-fg-light-3:    rgba(28,28,28,0.35);
+    --border-dark:     #2E2E2C;
+    --border-light:    rgba(28,28,28,0.18);
+
+    /* Letterbox color behind the stage */
+    --stage-bg:        #111110;
+
+    /* Typography — authored at the 1920×1080 stage size */
+    --font-display: 'Barlow', sans-serif;
+    --font-mono:    'IBM Plex Mono', monospace;
+    --size-display: 230px;  /* cover hero        (12vw)  */
+    --size-h1:      144px;  /* statement         (7.5vw) */
+    --size-stat:    106px;  /* stat numeral      (5.5vw) */
+    --size-h2:       92px;  /* slide headline    (4.8vw) */
+    --size-h3:       54px;  /* panel title       (2.8vw) */
+    --size-lead:     31px;  /* lead sentence     (1.6vw) */
+    --size-body:     22px;  /* body copy         (1.15vw)*/
+    --size-caption:  16px;  /* caption           (0.85vw)*/
+    --size-label:    14px;  /* mono chrome       (0.72vw)*/
+
+    /* Spacing — authored at stage size (5vw / 5vh) */
+    --pad-x:  96px;
+    --pad-y:  54px;
+    --gap-lg: 38px;
+    --gap-md: 22px;
+    --gap-sm: 11px;
+
+    /* Motion */
+    --ease: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* ===========================================
+   FIXED 16:9 STAGE: MANDATORY BASE STYLES
+   Slides are authored at 1920×1080 and scaled as a whole.
+   =========================================== */
+
+/* 1. Lock the browser viewport */
+html,
+body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+    background: var(--stage-bg, #000);
+}
+
+/* 2. Full-window deck viewport */
+.deck-viewport {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    background: var(--stage-bg, #000);
+}
+
+/* 3. Fixed 16:9 design canvas.
+   JavaScript sets transform: translate(...) scale(...). */
+.deck-stage {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 1920px;
+    height: 1080px;
+    overflow: hidden;
+    transform-origin: 0 0;
+    background: var(--slide-bg, #fff);
+}
+
+/* 4. Slides stack inside the fixed stage.
+   Content must be laid out at 1920×1080, not reflowed per device. */
+.slide {
+    position: absolute;
+    inset: 0;
+    width: 1920px;
+    height: 1080px;
+    overflow: hidden;
+    display: block;
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+    background: var(--slide-bg, #fff);
+}
+
+.slide.active,
+.slide.visible {
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+    z-index: 1;
+}
+
+/* 5. Keep media inside authored slide bounds */
+img,
+video,
+canvas,
+svg {
+    max-width: 100%;
+    max-height: 100%;
+}
+
+/* 6. Presentation chrome stays outside the slide design system */
+.deck-controls {
+    position: fixed;
+    left: 50%;
+    bottom: 22px;
+    transform: translateX(-50%);
+    z-index: 1000;
+}
+
+/* 7. Print one fixed-size slide per page */
+@media print {
+    html,
+    body {
+        width: 1920px;
+        height: auto;
+        overflow: visible;
+        background: #fff;
+    }
+
+    .deck-viewport {
+        position: static;
+        overflow: visible;
+        background: #fff;
+    }
+
+    .deck-stage {
+        position: static;
+        width: auto;
+        height: auto;
+        transform: none !important;
+        background: none;
+    }
+
+    .slide {
+        position: relative;
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        width: 1920px;
+        height: 1080px;
+        break-after: page;
+        page-break-after: always;
+    }
+
+    .slide:last-child {
+        break-after: auto;
+        page-break-after: auto;
+    }
+
+    .deck-controls {
+        display: none !important;
+    }
+}
+
+/* 8. Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.2s !important;
+    }
+}
+
+/* ===========================================
+   SURFACES
+   Every slide is one of exactly two surfaces.
+   =========================================== */
+.surface-dark   { background: var(--c-bg);       color: var(--c-fg); }
+.surface-yellow { background: var(--c-bg-light); color: var(--c-fg-light); }
+
+/* Inner frame — all slide padding lives here, not on .slide,
+   so the base stylesheet keeps full control of slide visibility. */
+.slide-frame {
+    position: absolute;
+    inset: 0;
+    padding: var(--pad-y) var(--pad-x);
+    display: flex;
+    flex-direction: column;
+}
+
+/* ===========================================
+   TYPE ROLES
+   Barlow 900 uppercase for all display; mono for metadata only.
+   =========================================== */
+.display,
+.h1,
+.h2,
+.h3,
+.stat-value {
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    font-weight: 900;
+}
+
+.display    { font-size: var(--size-display); line-height: 0.90; letter-spacing: -0.02em; }
+.h1         { font-size: var(--size-h1);      line-height: 0.92; letter-spacing: -0.02em; }
+.h2         { font-size: var(--size-h2);      line-height: 0.95; letter-spacing: -0.01em; }
+.h3         { font-size: var(--size-h3);      line-height: 1.10; font-weight: 700; }
+.stat-value { font-size: var(--size-stat);    line-height: 0.90; letter-spacing: -0.03em; }
+
+.lead {
+    font-family: var(--font-display);
+    font-size: var(--size-lead);
+    font-weight: 500;
+    line-height: 1.45;
+}
+
+.body {
+    font-family: var(--font-display);
+    font-size: var(--size-body);
+    font-weight: 400;
+    line-height: 1.6;
+}
+
+/* Mono is the "spec sheet" voice — chrome, counters, notes. Nothing else. */
+.label {
+    font-family: var(--font-mono);
+    font-size: var(--size-label);
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+/* ===========================================
+   CHROME BARS
+   Hairline rule + mono label left, mono counter right.
+   =========================================== */
+.chrome-bar,
+.foot-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex: 0 0 auto;
+}
+
+.chrome-bar {
+    padding-bottom: var(--gap-sm);
+    margin-bottom: var(--gap-lg);
+    border-bottom: 1px solid var(--border-dark);
+}
+
+.foot-bar {
+    padding-top: var(--gap-sm);
+    margin-top: var(--gap-lg);
+    border-top: 1px solid var(--border-dark);
+}
+
+.surface-yellow .chrome-bar { border-bottom-color: var(--border-light); }
+.surface-yellow .foot-bar    { border-top-color: var(--border-light); }
+
+.surface-dark   .chrome-bar, .surface-dark   .foot-bar { color: var(--c-fg-2); }
+.surface-yellow .chrome-bar, .surface-yellow .foot-bar { color: var(--c-fg-light-2); }
+
+/* ===========================================
+   SLIDE 01 — COVER
+   Image area fills the canvas; display type sits on top;
+   three-column mono lockup anchors the bottom.
+   =========================================== */
+.cover-img-area {
+    position: absolute;
+    inset: 0;
+    background: var(--c-bg-alt);
+    /* Hairline survey grid — structure, not decoration. No gradients. */
+    background-image:
+        linear-gradient(rgba(245,210,0,0.045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(245,210,0,0.045) 1px, transparent 1px);
+    background-size: 120px 120px;
+}
+
+.cover-frame {
+    position: absolute;
+    inset: 0;
+    padding: var(--pad-y) var(--pad-x);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.cover-type { margin-top: 40px; }
+
+/* Type-as-graphic-mass: each line wipes up from behind its own edge. */
+.mass-line { overflow: hidden; display: block; }
+
+.mass-line > span {
+    display: block;
+    transform: translateY(105%);
+    transition: transform 1.05s var(--ease);
+    transition-delay: var(--d, 0s);
+}
+
+.slide.visible .mass-line > span { transform: translateY(0); }
+
+/* The signature three-column metadata lockup */
+.cover-meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    align-items: end;
+    padding-top: var(--gap-md);
+    border-top: 1px solid rgba(245,210,0,0.25);
+    color: var(--c-fg-2);
+}
+
+.cover-meta > :nth-child(2) { text-align: center; }
+.cover-meta > :nth-child(3) { text-align: right; }
+.cover-meta .meta-row + .meta-row { margin-top: 6px; }
+.cover-meta .meta-strong { color: var(--c-fg); }
+
+/* ===========================================
+   SLIDE 02 — STAT / FEATURE ROW
+   Flat tiles, 2px top rule, numeral as the anchor.
+   =========================================== */
+.stat-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0 72px;
+    flex: 1 1 auto;
+    align-content: center;
+}
+
+.stat-card {
+    border-top: 2px solid var(--c-fg-light);
+    padding: var(--gap-md) var(--gap-md) var(--gap-md) 0;
+}
+
+.surface-dark .stat-card { border-top-color: var(--c-fg); }
+
+.stat-card .stat-value { margin-bottom: var(--gap-sm); }
+.stat-card .h3         { margin-bottom: 14px; }
+
+.stat-note {
+    font-family: var(--font-mono);
+    font-size: var(--size-caption);
+    letter-spacing: 0.04em;
+    line-height: 1.55;
+    text-transform: uppercase;
+    color: var(--c-fg-light-3);
+}
+
+.surface-dark .stat-note { color: var(--c-fg-3); }
+
+/* Em-dash bullets in the surface accent — never dots. */
+.bullets { list-style: none; }
+.bullets li { display: flex; gap: 0.5em; }
+.bullets li + li { margin-top: var(--gap-sm); }
+.bullets li::before { content: "—"; flex: 0 0 auto; }
+
+/* ===========================================
+   SLIDE 03 — STATEMENT
+   No chrome. Headline drops low with deliberate empty space above.
+   =========================================== */
+.statement-frame {
+    position: absolute;
+    inset: 0;
+    padding: var(--pad-y) var(--pad-x) calc(var(--pad-y) * 1.5);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+}
+
+.statement-kicker {
+    margin-bottom: var(--gap-lg);
+    color: var(--c-fg-2);
+}
+
+.statement-foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-top: calc(var(--gap-lg) * 1.6);
+    padding-top: var(--gap-md);
+    border-top: 1px solid var(--border-dark);
+    color: var(--c-fg-2);
+}
+
+/* ===========================================
+   REVEAL ANIMATIONS
+   Staggered via an explicit --d delay per element.
+   =========================================== */
+.reveal {
+    opacity: 0;
+    transform: translateY(26px);
+    transition: opacity 0.7s var(--ease), transform 0.7s var(--ease);
+    transition-delay: var(--d, 0s);
+}
+
+.slide.visible .reveal {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Hairline rules draw themselves in from the left */
+.rule-draw {
+    transform: scaleX(0);
+    transform-origin: 0 50%;
+    transition: transform 0.9s var(--ease);
+    transition-delay: var(--d, 0s);
+}
+
+.slide.visible .rule-draw { transform: scaleX(1); }
+
+/* ===========================================
+   DECK CHROME (outside the slide design system)
+   =========================================== */
+.deck-controls {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 9px 16px;
+    background: var(--c-bg);
+    border: 1px solid var(--border-dark);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    color: var(--c-fg-2);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.deck-viewport:hover ~ .deck-controls,
+.deck-controls:hover,
+.deck-controls.show { opacity: 1; }
+
+.deck-controls button {
+    background: none;
+    border: none;
+    color: var(--c-fg);
+    font: inherit;
+    cursor: pointer;
+    padding: 0 4px;
+    line-height: 1;
+}
+
+.deck-controls button:disabled { color: var(--c-fg-3); cursor: default; }
+.deck-controls .counter { color: var(--c-fg); min-width: 62px; text-align: center; }
+
+/* ===========================================
+   INLINE EDITING
+   Hover the top-left hotzone or press E. Visibility is JS-driven —
+   a CSS `~` sibling rule breaks the hover chain via pointer-events.
+   =========================================== */
+.edit-hotzone {
+    position: fixed;
+    top: 0; left: 0;
+    width: 80px; height: 80px;
+    z-index: 10000;
+    cursor: pointer;
+}
+
+.edit-toggle {
+    position: fixed;
+    top: 18px; left: 18px;
+    z-index: 10001;
+    padding: 8px 12px;
+    background: var(--c-bg-light);
+    color: var(--c-fg-light);
+    border: none;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.edit-toggle.show,
+.edit-toggle.active { opacity: 1; pointer-events: auto; }
+.edit-toggle.active { outline: 2px solid var(--c-fg-light); outline-offset: 2px; }
+
+body.editing [contenteditable="true"] {
+    outline: 1px dashed currentColor;
+    outline-offset: 4px;
+    cursor: text;
+}
+</style>
+</head>
+<body>
+
+<div class="deck-viewport">
+<main class="deck-stage" id="deckStage">
+
+    <!-- ===========================================
+         SLIDE 01 — COVER
+         =========================================== -->
+    <section class="slide surface-dark active" aria-label="Cover">
+        <div class="cover-img-area"></div>
+
+        <div class="cover-frame">
+            <div class="cover-type">
+                <p class="label reveal" style="--d:.05s; color:var(--c-fg-3); margin-bottom:28px;">Zero&nbsp;Dependencies &nbsp;/&nbsp; Single&nbsp;File &nbsp;/&nbsp; 16:9&nbsp;Fixed&nbsp;Stage</p>
+                <h1 class="display">
+                    <span class="mass-line"><span style="--d:.15s">Frontend</span></span>
+                    <span class="mass-line"><span style="--d:.28s">Slides</span></span>
+                </h1>
+            </div>
+
+            <!-- Three-column mono lockup: left / center / right -->
+            <div class="cover-meta label reveal" style="--d:.75s">
+                <div>
+                    <div class="meta-row meta-strong">Claude Code × Frontend Slides</div>
+                    <div class="meta-row">August 2026</div>
+                </div>
+                <div>
+                    <div class="meta-row">Introducing Frontend Slides</div>
+                </div>
+                <div>
+                    <div class="meta-row meta-strong">v2.1.0</div>
+                    <div class="meta-row">01 / 03</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===========================================
+         SLIDE 02 — WHAT IT DOES (yellow surface)
+         =========================================== -->
+    <section class="slide surface-yellow" aria-label="What it does">
+        <div class="slide-frame">
+
+            <header class="chrome-bar label">
+                <span>Introducing Frontend Slides</span>
+                <span>02 / 03</span>
+            </header>
+
+            <h2 class="h2 reveal" style="--d:.1s">Three things<br>it gives you</h2>
+
+            <div class="stat-row">
+                <article class="stat-card reveal" style="--d:.25s">
+                    <div class="stat-value">1</div>
+                    <h3 class="h3">HTML file</h3>
+                    <p class="stat-note">All CSS and JS inline. No npm,<br>no build step, no CDN at runtime.</p>
+                </article>
+
+                <article class="stat-card reveal" style="--d:.38s">
+                    <div class="stat-value">16:9</div>
+                    <h3 class="h3">Every screen</h3>
+                    <p class="stat-note">Authored at 1920×1080 and scaled<br>whole — never reflowed on phones.</p>
+                </article>
+
+                <article class="stat-card reveal" style="--d:.51s">
+                    <div class="stat-value">34</div>
+                    <h3 class="h3">Bold templates</h3>
+                    <p class="stat-note">A complete design system per deck,<br>chosen by preview, not by adjective.</p>
+                </article>
+            </div>
+
+            <footer class="foot-bar label">
+                <span>Arrow keys, space, or swipe to advance</span>
+                <span>Press E to edit any text</span>
+            </footer>
+
+        </div>
+    </section>
+
+    <!-- ===========================================
+         SLIDE 03 — CLOSING STATEMENT
+         =========================================== -->
+    <section class="slide surface-dark" aria-label="Closing">
+        <div class="statement-frame">
+
+            <p class="label statement-kicker reveal" style="--d:.1s">The whole system, in one rule</p>
+
+            <h2 class="h1">
+                <span class="mass-line"><span style="--d:.2s">The headline</span></span>
+                <span class="mass-line"><span style="--d:.33s">is the design.</span></span>
+            </h2>
+
+            <div class="statement-foot label reveal" style="--d:.9s">
+                <span>Introducing Frontend Slides</span>
+                <span>03 / 03</span>
+            </div>
+
+        </div>
+    </section>
+
+</main>
+</div>
+
+<!-- Deck chrome: lives outside the stage, never part of the design system -->
+<nav class="deck-controls" id="deckControls" aria-label="Slide navigation">
+    <button id="prevBtn" aria-label="Previous slide">←</button>
+    <span class="counter" id="counter">01 / 03</span>
+    <button id="nextBtn" aria-label="Next slide">→</button>
+</nav>
+
+<div class="edit-hotzone" id="editHotzone" title="Edit mode (E)"></div>
+<button class="edit-toggle" id="editToggle" title="Edit mode (E)">Edit</button>
+
+<script>
+/* ===========================================
+   SLIDE PRESENTATION CONTROLLER
+   Stage scaling + keyboard / wheel / touch navigation.
+   =========================================== */
+class SlidePresentation {
+    constructor() {
+        this.slides   = document.querySelectorAll('.slide');
+        this.stage    = document.getElementById('deckStage');
+        this.controls = document.getElementById('deckControls');
+        this.counter  = document.getElementById('counter');
+        this.current  = 0;
+
+        this.setupStageScale();
+        this.setupKeyboardNav();
+        this.setupPointerNav();
+        this.setupTouchNav();
+        this.showSlide(0);
+    }
+
+    /* Scale the whole 1920×1080 canvas to fit the window, letterboxing
+       or pillarboxing as needed. Slide content is never re-laid-out. */
+    setupStageScale() {
+        const scale = () => {
+            const factor = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+            const x = (window.innerWidth  - 1920 * factor) / 2;
+            const y = (window.innerHeight - 1080 * factor) / 2;
+            this.stage.style.transform = `translate(${x}px, ${y}px) scale(${factor})`;
+        };
+        scale();
+        window.addEventListener('resize', scale);
+    }
+
+    setupKeyboardNav() {
+        document.addEventListener('keydown', (e) => {
+            if (e.target.getAttribute('contenteditable') === 'true') return;
+            switch (e.key) {
+                case 'ArrowRight': case 'ArrowDown': case ' ': case 'PageDown':
+                    e.preventDefault(); this.next(); break;
+                case 'ArrowLeft': case 'ArrowUp': case 'PageUp':
+                    e.preventDefault(); this.prev(); break;
+                case 'Home': e.preventDefault(); this.showSlide(0); break;
+                case 'End':  e.preventDefault(); this.showSlide(this.slides.length - 1); break;
+            }
+        });
+    }
+
+    setupPointerNav() {
+        document.getElementById('nextBtn').addEventListener('click', () => this.next());
+        document.getElementById('prevBtn').addEventListener('click', () => this.prev());
+
+        // Reveal the control bar briefly whenever the mouse moves.
+        let idle = null;
+        window.addEventListener('mousemove', () => {
+            this.controls.classList.add('show');
+            clearTimeout(idle);
+            idle = setTimeout(() => this.controls.classList.remove('show'), 2200);
+        });
+
+        // Throttled wheel navigation.
+        let wheelLock = false;
+        window.addEventListener('wheel', (e) => {
+            if (wheelLock || Math.abs(e.deltaY) < 18) return;
+            wheelLock = true;
+            e.deltaY > 0 ? this.next() : this.prev();
+            setTimeout(() => { wheelLock = false; }, 650);
+        }, { passive: true });
+    }
+
+    setupTouchNav() {
+        let startX = 0, startY = 0;
+        window.addEventListener('touchstart', (e) => {
+            startX = e.changedTouches[0].clientX;
+            startY = e.changedTouches[0].clientY;
+        }, { passive: true });
+
+        window.addEventListener('touchend', (e) => {
+            const dx = e.changedTouches[0].clientX - startX;
+            const dy = e.changedTouches[0].clientY - startY;
+            if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
+                dx < 0 ? this.next() : this.prev();
+            }
+        }, { passive: true });
+    }
+
+    next() { this.showSlide(this.current + 1); }
+    prev() { this.showSlide(this.current - 1); }
+
+    showSlide(index) {
+        this.current = Math.max(0, Math.min(index, this.slides.length - 1));
+        this.slides.forEach((slide, i) => {
+            const on = i === this.current;
+            slide.classList.toggle('active', on);
+            slide.classList.toggle('visible', on);
+        });
+
+        const pad = (n) => String(n).padStart(2, '0');
+        this.counter.textContent = `${pad(this.current + 1)} / ${pad(this.slides.length)}`;
+        document.getElementById('prevBtn').disabled = this.current === 0;
+        document.getElementById('nextBtn').disabled = this.current === this.slides.length - 1;
+    }
+}
+
+/* ===========================================
+   INLINE TEXT EDITOR
+   Toggle with the corner button or E. Edits persist to localStorage
+   and can be written back out as a fresh HTML file.
+   =========================================== */
+class InlineEditor {
+    constructor() {
+        this.isActive = false;
+        this.storageKey = 'frontend-slides-demo';
+        this.selector = '.display, .h1, .h2, .h3, .lead, .body, .label, ' +
+                        '.stat-value, .stat-note, .meta-row, .mass-line > span';
+        this.toggleBtn = document.getElementById('editToggle');
+        this.restore();
+    }
+
+    get nodes() { return document.querySelectorAll(this.selector); }
+
+    toggleEditMode() {
+        this.isActive = !this.isActive;
+        document.body.classList.toggle('editing', this.isActive);
+        this.toggleBtn.classList.toggle('active', this.isActive);
+        this.toggleBtn.textContent = this.isActive ? 'Done · Ctrl+S' : 'Edit';
+
+        this.nodes.forEach((node) => {
+            node.setAttribute('contenteditable', this.isActive ? 'true' : 'false');
+            if (this.isActive) node.addEventListener('input', this.save, { once: false });
+        });
+
+        if (!this.isActive) this.save();
+    }
+
+    save = () => {
+        const data = {};
+        this.nodes.forEach((node, i) => { data[i] = node.innerHTML; });
+        try { localStorage.setItem(this.storageKey, JSON.stringify(data)); } catch (e) {}
+    };
+
+    restore() {
+        let data;
+        try { data = JSON.parse(localStorage.getItem(this.storageKey) || 'null'); } catch (e) { return; }
+        if (!data) return;
+        this.nodes.forEach((node, i) => {
+            if (data[i] !== undefined) node.innerHTML = data[i];
+        });
+    }
+
+    /* Write the live DOM back out as a standalone file. */
+    exportFile() {
+        const clone = document.documentElement.cloneNode(true);
+        clone.querySelectorAll('[contenteditable]').forEach((n) => n.removeAttribute('contenteditable'));
+        clone.querySelector('body').classList.remove('editing');
+
+        const blob = new Blob(['<!DOCTYPE html>\n' + clone.outerHTML], { type: 'text/html' });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href = url;
+        a.download = 'introducing-frontend-slides.html';
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+}
+
+const deck   = new SlidePresentation();
+const editor = new InlineEditor();
+
+/* --- Edit-mode affordances: button, hotzone hover, E key, Ctrl+S --- */
+const hotzone    = document.getElementById('editHotzone');
+const editToggle = document.getElementById('editToggle');
+let hideTimeout  = null;
+
+const showToggle = () => { clearTimeout(hideTimeout); editToggle.classList.add('show'); };
+const hideToggle = () => {
+    hideTimeout = setTimeout(() => {
+        if (!editor.isActive) editToggle.classList.remove('show');
+    }, 400);
+};
+
+hotzone.addEventListener('mouseenter', showToggle);
+hotzone.addEventListener('mouseleave', hideToggle);
+editToggle.addEventListener('mouseenter', showToggle);
+editToggle.addEventListener('mouseleave', hideToggle);
+
+hotzone.addEventListener('click', () => editor.toggleEditMode());
+editToggle.addEventListener('click', () => editor.toggleEditMode());
+
+document.addEventListener('keydown', (e) => {
+    if ((e.key === 'e' || e.key === 'E') && e.target.getAttribute('contenteditable') !== 'true') {
+        editor.toggleEditMode();
+        showToggle();
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        editor.save();
+        editor.exportFile();
+    }
+});
+</script>
+</body>
+</html>
